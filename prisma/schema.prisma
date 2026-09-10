@@ -1,0 +1,70 @@
+// Prisma schema for BU Course Planner
+// Datasource: local SQLite file (dev.db)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// A course in the BU catalog (e.g. "CAS CS 501").
+model Course {
+  id           String   @id @default(cuid())
+  code         String   @unique // "CAS CS 501"
+  subjectCode  String   // "CAS CS"
+  courseNumber String   // "501"
+  title        String
+  description  String
+  school       String   // "College of Arts & Sciences"
+  department   String   // "Computer Science"
+  credits      Float
+  level        String   // "Undergraduate" | "Graduate"
+  hubUnits     String?  // comma-separated BU Hub units, optional
+  sections     Section[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+/// A specific offering (lecture/discussion/lab/practicum/seminar) of a Course in a given term.
+model Section {
+  id            String   @id @default(cuid())
+  courseId      String
+  course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  sectionCode   String   // "A1"
+  term          String   // "Fall 2026"
+  type          String   // "Lecture" | "Discussion" | "Lab" | "Practicum" | "Seminar"
+  instructor    String?
+  location      String?
+  days          String   // comma-separated day codes: "MO" | "TU,TH" | "MO,WE,FR"
+  startTime     String   // 24h "HH:MM"
+  endTime       String   // 24h "HH:MM"
+  scheduleItems ScheduleItem[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+/// One entry on the student's personal schedule/course builder.
+/// May reference a catalog Section (added from the navigator) or stand alone
+/// (a manually entered class/exam not in the seeded catalog).
+model ScheduleItem {
+  id         String   @id @default(cuid())
+  term       String   // "Fall 2026"
+  kind       String   @default("class") // "class" | "exam"
+  sectionId  String?
+  section    Section? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  courseCode String   // "CAS CS 501"
+  title      String
+  type       String?  // "Lecture" | "Discussion" | "Practicum" | "Exam" ...
+  instructor String?
+  location   String?
+  days       String   // comma-separated day codes, empty string for exam entries
+  startTime  String   // 24h "HH:MM"
+  endTime    String   // 24h "HH:MM"
+  examDate   String?  // ISO date "YYYY-MM-DD", only set when kind = "exam"
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
